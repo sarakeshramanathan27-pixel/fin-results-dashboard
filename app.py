@@ -108,3 +108,38 @@ if st.button("Export to Excel"):
         st.success("Excel ready.")
     except Exception as e:
         st.error(f"Export failed: {e}")
+        import streamlit as st
+from filings import fetch_latest_annual_report_url, download_pdf
+
+st.set_page_config(page_title="NSE Financial Results Dashboard", layout="wide")
+
+st.title("📊 NSE Financial Results Dashboard")
+
+# Input box for NSE symbol
+symbol = st.text_input("Enter NSE Stock Symbol (e.g., INFY, TCS, RELIANCE):", "")
+
+if st.button("Fetch Annual Report"):
+    if symbol.strip() == "":
+        st.warning("⚠️ Please enter a valid NSE stock symbol.")
+    else:
+        with st.spinner("Fetching latest annual report..."):
+            report_url = fetch_latest_annual_report_url(symbol.strip().upper())
+
+        if report_url:
+            st.success(f"✅ Found Annual Report for {symbol}")
+            st.markdown(f"[📄 View Report Online]({report_url})")
+
+            save_path = f"{symbol}_report.pdf"
+            file_path = download_pdf(report_url, save_path)
+
+            if file_path:
+                with open(file_path, "rb") as pdf_file:
+                    st.download_button(
+                        label="⬇️ Download Annual Report",
+                        data=pdf_file,
+                        file_name=f"{symbol}_annual_report.pdf",
+                        mime="application/pdf"
+                    )
+        else:
+            st.error(f"❌ No annual report found for {symbol}")
+
