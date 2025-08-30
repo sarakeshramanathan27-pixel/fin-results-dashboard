@@ -1,13 +1,16 @@
 import streamlit as st
 import pandas as pd
 import pdfplumber
+import os
 
-# Try to import camelot safely
-try:
-    import camelot
-    CAMELOT_AVAILABLE = True
-except ImportError:
-    CAMELOT_AVAILABLE = False
+# Try to import Camelot only if not on Streamlit Cloud
+CAMELOT_AVAILABLE = False
+if "STREAMLIT_RUNTIME" not in os.environ:  # Means you are running locally
+    try:
+        import camelot
+        CAMELOT_AVAILABLE = True
+    except ImportError:
+        pass
 
 st.set_page_config(page_title="Financial Dashboard", page_icon="📊", layout="wide")
 
@@ -23,9 +26,10 @@ def process_financial_pdf(uploaded_file, method="auto"):
 
     # If Camelot is requested but not available → fallback
     if method.startswith("camelot") and not CAMELOT_AVAILABLE:
+        st.warning("⚠️ Camelot not available in this environment. Using pdfplumber instead.")
         method = "pdfplumber"
 
-    # Camelot methods
+    # Camelot methods (only works locally if available)
     if CAMELOT_AVAILABLE and method in ["camelot_lattice", "camelot_stream"]:
         try:
             flavor = "lattice" if method == "camelot_lattice" else "stream"
@@ -36,8 +40,8 @@ def process_financial_pdf(uploaded_file, method="auto"):
                 df["extraction_method"] = flavor
                 tables.append(df)
         except Exception as e:
-            st.warning(f"Camelot failed: {e} → falling back to pdfplumber")
-            method = "pdfplumber"  # fallback
+            st.warning(f"Camelot failed: {e} → Falling back to pdfplumber")
+            method = "pdfplumber"
 
     # Pdfplumber extraction
     if method in ["pdfplumber", "auto"]:
@@ -67,6 +71,11 @@ def main():
         if uploaded_file:
             st.success("✅ File uploaded!")
             st.info(f"**File:** {uploaded_file.name}")
+
+            # Show info if Camelot is disabled
+            if not CAMELOT_AVAILABLE:
+                st.info("ℹ️ Camelot is disabled on Streamlit Cloud. Using pdfplumber instead.")
+
             method = st.selectbox(
                 "Extraction Method",
                 ['auto', 'pdfplumber', 'camelot_lattice', 'camelot_stream'],
@@ -110,7 +119,7 @@ def main():
         Upload annual reports or financial statements and extract tables and text.
 
         ### 🚀 Features:
-        - Multiple extraction methods (pdfplumber + camelot)
+        - Multiple extraction methods (pdfplumber + camelot when available)
         - Automatic fallback to pdfplumber if Camelot fails
         - Export tables to CSV
         - View raw text content alongside tables
